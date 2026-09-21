@@ -1,4 +1,4 @@
-name: Deploy Cloud Function
+name: Deploy Cloud Function and Workflow
 
 on:
   push:
@@ -14,8 +14,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -36,3 +37,10 @@ jobs:
             --project=project-ab4fa986-e441-43f4-9fe \
             --entry-point=LoanHandler \
             --trigger-topic=orders
+
+      - name: Deploy Workflow
+        run: |
+          gcloud workflows deploy loan-workflow \
+            --location=us-central1 \
+            --project=project-ab4fa986-e441-43f4-9fe \
+            --source=workflow.yaml
