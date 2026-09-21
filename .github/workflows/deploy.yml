@@ -20,9 +20,9 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          project_id: ID_DO_SEU_PROJETO
-          workload_identity_provider: PROVIDER_DO_WORKLOAD_IDENTITY
-          service_account: SERVICE_ACCOUNT_DO_CI_CD
+          project_id: project-ab4fa986-e441-43f4-9fe
+          workload_identity_provider: projects/1036053475221/locations/global/workloadIdentityPools/github/providers/github
+          service_account: github-actions-deploy@project-ab4fa986-e441-43f4-9fe.iam.gserviceaccount.com
 
       - name: Setup Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v3
