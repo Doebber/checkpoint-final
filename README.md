@@ -16,13 +16,11 @@ Durante o processamento, a função:
 6. Obtém uma análise estruturada.
 7. Registra o resultado no Google Cloud Logging.
 
-A IA atua como **assistente de análise de crédito**. Ela não toma a decisão definitiva de aprovação ou reprovação. A recomendação gerada serve como apoio para a análise de um profissional responsável pela decisão final.
+A IA atua como **assistente de análise de crédito**. Ela não toma a decisão definitiva de aprovação ou reprovação. A análise e a recomendação geradas servem como apoio para um profissional responsável pela decisão final.
 
-O projeto também utiliza **GitHub Actions** para realizar o deploy automático da Cloud Function no Google Cloud.
+O projeto também utiliza **GitHub Actions** para automatizar o processo de CI/CD.
 
-O pipeline é acionado automaticamente a cada `push` na branch `main`.
-
-A autenticação entre GitHub Actions e Google Cloud utiliza **Workload Identity Federation (OIDC)**, sem armazenamento de chaves JSON ou credenciais de serviço no repositório.
+A autenticação entre GitHub Actions e Google Cloud utiliza **Workload Identity Federation (OIDC)**, sem armazenamento de chaves JSON ou credenciais permanentes no repositório.
 
 ---
 
@@ -31,45 +29,49 @@ A autenticação entre GitHub Actions e Google Cloud utiliza **Workload Identity
 A arquitetura principal do projeto é:
 
 ```text
-                    GitHub
-                       │
-                       │ Push
-                       ▼
-              GitHub Actions
-                       │
-                       │ OIDC / WIF
-                       ▼
-                Google Cloud
-                       │
-                       ▼
-              Cloud Function Gen2
-              LoanHandlerPubSub
-                       │
-                       ▼
-                    Pub/Sub
-                    orders
-                       │
-                       ▼
-                   Eventarc
-                       │
-                       ▼
-                LoanHandler
-                       │
-             ┌─────────┴─────────┐
-             │                   │
-             ▼                   ▼
-       customers.json        Vertex AI
-        base interna          Gemini
-             │                   │
-             └─────────┬─────────┘
-                       ▼
-              Análise de Crédito
-                       │
-                       ▼
-                Cloud Logging
-                       │
-                       ▼
-                Analista Humano
+                         GitHub
+                           │
+                           │ Push
+                           ▼
+                    GitHub Actions
+                           │
+                           │ OIDC / WIF
+                           ▼
+                     Google Cloud
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+             ▼                           ▼
+      Cloud Function Gen2           Cloud Workflows
+       LoanHandlerPubSub            loan-workflow
+             │                           │
+             │                           │
+             │                           ▼
+             │                       Pub/Sub
+             │                        orders
+             │                           │
+             │                           ▼
+             │                        Eventarc
+             │                           │
+             └──────────────┬────────────┘
+                            ▼
+                       LoanHandler
+                            │
+                  ┌─────────┴─────────┐
+                  │                   │
+                  ▼                   ▼
+           customers.json        Vertex AI
+           base interna           Gemini
+                  │                   │
+                  └─────────┬─────────┘
+                            ▼
+                    Análise de Crédito
+                            │
+                            ▼
+                      Cloud Logging
+                            │
+                            ▼
+                     Analista Humano
 ```
 
 A comunicação entre os componentes de processamento é baseada em eventos, mantendo o desacoplamento entre a publicação da solicitação e o processamento da análise.
@@ -142,6 +144,7 @@ Realiza:
 * Preparação da análise.
 * Chamada do Vertex AI.
 * Registro estruturado dos resultados.
+* Tratamento de erros.
 
 ### `function.go`
 
@@ -163,7 +166,7 @@ Foi criada uma abstração `CustomerRepository` para permitir que futuramente a 
 
 Responsável pela preparação do contexto enviado ao modelo de IA.
 
-Também define as regras utilizadas para orientar a análise.
+Também define as informações utilizadas para orientar a análise de crédito.
 
 ### `vertex_ai.go`
 
@@ -198,7 +201,7 @@ Os dados são fictícios e não representam clientes reais.
 
 # Fluxo de processamento
 
-Uma solicitação possui o seguinte formato:
+Uma solicitação de empréstimo possui a seguinte estrutura:
 
 ```json
 {
@@ -215,7 +218,7 @@ O Workflow publica a solicitação no tópico:
 orders
 ```
 
-A mensagem é processada pelo fluxo:
+A mensagem é processada pelo seguinte fluxo:
 
 ```text
 Workflow
@@ -226,6 +229,8 @@ Eventarc
     ↓
 LoanHandlerPubSub
     ↓
+Validação da solicitação
+    ↓
 Busca do cliente
     ↓
 Preparação da análise
@@ -235,13 +240,15 @@ Vertex AI / Gemini
 Análise estruturada
     ↓
 Cloud Logging
+    ↓
+Analista Humano
 ```
 
 ---
 
 # Análise com Inteligência Artificial
 
-A IA recebe exclusivamente os dados internos disponibilizados pela aplicação.
+A IA recebe exclusivamente os dados internos disponibilizados pela aplicação para realizar a análise.
 
 O modelo é orientado a produzir:
 
@@ -267,7 +274,7 @@ A resposta possui formato estruturado:
 }
 ```
 
-A aplicação também valida se a resposta retornada pelo modelo contém os campos esperados.
+A aplicação utiliza um schema de resposta para orientar o modelo e também valida se a resposta retornada contém os campos esperados.
 
 Uma resposta incompleta é tratada como erro.
 
@@ -280,24 +287,24 @@ O fluxo é:
 ```text
 Dados do cliente
        ↓
-IA
+      IA
        ↓
 Análise preliminar
        ↓
-Recomendação
+ Recomendação
        ↓
 Analista humano
        ↓
-Decisão final
+ Decisão final
 ```
 
-Dessa forma, a IA funciona como uma ferramenta de apoio à análise.
+Dessa forma, a IA funciona como uma ferramenta de apoio à análise, mantendo a decisão final sob responsabilidade humana.
 
 ---
 
 # Exemplo de análise
 
-Durante um teste com o cliente `Joao`, foi utilizada a seguinte solicitação:
+Durante um teste com um dos clientes da base simulada, foi utilizada uma solicitação de empréstimo contendo:
 
 ```json
 {
@@ -311,8 +318,8 @@ Durante um teste com o cliente `Joao`, foi utilizada a seguinte solicitação:
 A IA identificou que o cliente possuía histórico de pagamentos sem atrasos, mas também identificou uma inconsistência nos dados simulados:
 
 * Empréstimo informado como ativo.
-* Saldo devedor de R$ 5.000.
-* 24 de 24 parcelas pagas.
+* Existência de saldo devedor.
+* Todas as parcelas informadas como pagas.
 * Nenhum atraso registrado.
 
 A recomendação gerada orientou o analista humano a verificar essa inconsistência antes de prosseguir com a análise.
@@ -330,7 +337,7 @@ Esse cenário demonstra que o modelo não apenas resume os dados, mas também po
 * Google Cloud CLI (`gcloud`)
 * Go
 * Uma conta com permissões no projeto Google Cloud
-* Projeto Google Cloud configurado
+* Um projeto Google Cloud configurado
 * APIs necessárias habilitadas
 
 Clone o repositório:
@@ -355,100 +362,119 @@ go mod tidy
 
 # Configuração do Google Cloud
 
-O projeto utiliza:
+O projeto utiliza os seguintes recursos:
 
 ```text
-Projeto:
-project-ab4fa986-e441-43f4-9fe
-```
-
 Região:
-
-```text
 us-central1
-```
 
 Tópico Pub/Sub:
-
-```text
 orders
-```
 
 Cloud Function:
-
-```text
 LoanHandlerPubSub
-```
 
 Entry point:
-
-```text
 LoanHandler
-```
 
 Workflow:
-
-```text
 loan-workflow
+```
+
+O projeto deve estar configurado no ambiente do Google Cloud CLI.
+
+Para verificar o projeto atualmente selecionado:
+
+```bash
+gcloud config get-value project
 ```
 
 ---
 
 # Habilitação do Vertex AI
 
-A API do Vertex AI deve estar habilitada:
+A API do Vertex AI deve estar habilitada no projeto:
 
 ```bash
-gcloud services enable aiplatform.googleapis.com \
-  --project=project-ab4fa986-e441-43f4-9fe
+gcloud services enable aiplatform.googleapis.com
 ```
 
 A Service Account utilizada pela execução da Cloud Function deve possuir permissão para utilizar o Vertex AI.
 
-Exemplo:
+A permissão necessária é:
 
-```bash
-gcloud projects add-iam-policy-binding \
-  project-ab4fa986-e441-43f4-9fe \
-  --member="serviceAccount:1036053475221-compute@developer.gserviceaccount.com" \
-  --role="roles/aiplatform.user"
+```text
+roles/aiplatform.user
 ```
 
 ---
 
-# Deploy manual
+# Deploy e CI/CD
 
-Embora o projeto utilize CI/CD, a função pode ser implantada manualmente utilizando:
+O projeto utiliza **GitHub Actions** como mecanismo principal de CI/CD.
+
+O workflow está localizado em:
+
+```text
+.github/workflows/deploy.yml
+```
+
+O pipeline é acionado automaticamente quando ocorre um `push` na branch:
+
+```text
+main
+```
+
+O processo realiza:
+
+1. Checkout do código.
+2. Autenticação no Google Cloud.
+3. Autenticação utilizando OIDC.
+4. Workload Identity Federation.
+5. Configuração do Google Cloud CLI.
+6. Deploy da Cloud Function.
+7. Deploy do Google Cloud Workflow.
+
+Dessa forma, tanto a aplicação quanto o Workflow são atualizados automaticamente a partir do repositório.
+
+---
+
+# Deploy da Cloud Function
+
+O deploy da Cloud Function é realizado automaticamente pelo GitHub Actions.
+
+O comando utilizado pelo pipeline é equivalente a:
 
 ```bash
 gcloud functions deploy LoanHandlerPubSub \
   --gen2 \
   --runtime=go124 \
   --region=us-central1 \
-  --project=project-ab4fa986-e441-43f4-9fe \
   --entry-point=LoanHandler \
   --trigger-topic=orders
 ```
 
+O deploy manual pode ser utilizado para testes ou manutenção, mas não é o fluxo principal do projeto.
+
 ---
 
-# Workflow
+# Deploy do Workflow
 
-O projeto utiliza o Google Cloud Workflows para publicar as solicitações no Pub/Sub.
-
-O arquivo utilizado é:
+O arquivo do Workflow está localizado na raiz do repositório:
 
 ```text
 workflow.yaml
 ```
 
-Deploy:
+O GitHub Actions realiza o deploy utilizando:
 
 ```bash
 gcloud workflows deploy loan-workflow \
   --location=us-central1 \
   --source=workflow.yaml
 ```
+
+Dessa forma, uma alteração realizada no `workflow.yaml` e enviada para a branch `main` também pode ser publicada automaticamente no Google Cloud.
 
 ---
 
@@ -473,13 +499,13 @@ Uma execução bem-sucedida apresenta:
 state: SUCCEEDED
 ```
 
-e retorna o identificador da mensagem publicada no Pub/Sub.
+O Workflow também retorna o identificador da mensagem publicada no Pub/Sub.
 
 Exemplo:
 
 ```json
 {
-  "messageId": "21923477707636129",
+  "messageId": "...",
   "status": "SUCCESS"
 }
 ```
@@ -534,17 +560,19 @@ Os registros incluem informações como:
 * Tempo de processamento.
 * Resultado da análise.
 
-O tempo total de processamento também é registrado através do campo:
+O tempo de processamento também é registrado através do campo:
 
 ```text
 duration_ms
 ```
 
+Os eventos estruturados permitem acompanhar as principais etapas da execução e identificar erros durante o processamento.
+
 ---
 
 # CI/CD
 
-O projeto utiliza **GitHub Actions** para realizar o deploy automático da Cloud Function.
+O projeto utiliza **GitHub Actions** para automatizar o processo de implantação.
 
 O workflow está localizado em:
 
@@ -565,7 +593,24 @@ O processo executa:
 3. Autenticação utilizando OIDC.
 4. Workload Identity Federation.
 5. Configuração do Google Cloud CLI.
-6. Deploy da Cloud Function `LoanHandlerPubSub`.
+6. Deploy da Cloud Function.
+7. Deploy do Workflow.
+
+Fluxo simplificado:
+
+```text
+GitHub Push
+     ↓
+GitHub Actions
+     ↓
+OIDC
+     ↓
+Workload Identity Federation
+     ↓
+Google Cloud
+     ├── Cloud Function
+     └── Workflow
+```
 
 ---
 
@@ -573,7 +618,7 @@ O processo executa:
 
 A autenticação do GitHub Actions não utiliza chaves JSON.
 
-Foi configurado:
+O fluxo utilizado é:
 
 ```text
 GitHub
@@ -589,7 +634,7 @@ Service Account
 Google Cloud
 ```
 
-Essa configuração permite que o GitHub Actions obtenha credenciais temporárias para realizar o deploy sem armazenar uma chave privada no GitHub.
+Essa configuração permite que o GitHub Actions obtenha credenciais temporárias para realizar os deployments sem armazenar uma chave privada no GitHub.
 
 ---
 
@@ -628,7 +673,25 @@ Publicação
     ↓
 Pub/Sub
     ↓
+Eventarc
+    ↓
 Processamento assíncrono
+```
+
+## Uso do Google Cloud Workflows
+
+O Workflow foi utilizado como ponto de entrada para os testes e para a publicação das solicitações no Pub/Sub.
+
+Isso permite iniciar o fluxo de forma controlada sem a necessidade de criar uma API HTTP adicional.
+
+```text
+Workflows
+    ↓
+Pub/Sub
+    ↓
+Eventarc
+    ↓
+Cloud Function
 ```
 
 ## Uma única Cloud Function para o processamento
@@ -642,7 +705,7 @@ credit_analysis.go
 vertex_ai.go
 ```
 
-Essa organização permite separar responsabilidades sem criar várias funções para cada etapa.
+Essa organização permite separar responsabilidades sem criar várias funções para cada etapa do processamento.
 
 ## Abstração do acesso aos clientes
 
@@ -666,6 +729,20 @@ Ela identifica informações relevantes, inconsistências e pontos de atenção,
 
 ---
 
+# Tratamento de erros e retry
+
+O processamento diferencia erros de negócio de erros técnicos.
+
+Erros relacionados a dados inválidos ou cliente não encontrado podem ser tratados pela aplicação sem provocar novas tentativas desnecessárias.
+
+Falhas na comunicação com serviços externos, como o Vertex AI, são retornadas pela função para permitir o mecanismo de retry da arquitetura orientada a eventos.
+
+O Workflow também possui mecanismo de retry para a publicação no Pub/Sub.
+
+Essa abordagem evita que falhas temporárias sejam tratadas como erros permanentes.
+
+---
+
 # Conclusão
 
 O projeto consolida os principais conceitos trabalhados durante os checkpoints:
@@ -678,7 +755,7 @@ O projeto consolida os principais conceitos trabalhados durante os checkpoints:
 * Workflows.
 * Retry e tratamento de erros.
 * Structured Logging.
-* Métricas e observabilidade.
+* Observabilidade.
 * Integração com Vertex AI / Gemini.
 * CI/CD.
 * GitHub Actions.
@@ -687,4 +764,6 @@ O projeto consolida os principais conceitos trabalhados durante os checkpoints:
 * Separação de responsabilidades.
 * Apoio à decisão utilizando IA.
 
-A solução demonstra como uma solicitação de empréstimo pode ser processada de forma assíncrona, utilizando serviços gerenciados do Google Cloud e Inteligência Artificial para gerar uma análise estruturada que serve como apoio ao analista humano.
+A solução demonstra como uma solicitação de empréstimo pode ser processada de forma assíncrona utilizando serviços gerenciados do Google Cloud e Inteligência Artificial para gerar uma análise estruturada.
+
+A arquitetura mantém o processamento desacoplado, utiliza autenticação sem chaves permanentes no CI/CD e mantém a decisão final de crédito sob responsabilidade de um analista humano.
