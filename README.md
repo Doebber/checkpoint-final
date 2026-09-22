@@ -682,8 +682,6 @@ Processamento assíncrono
 
 O Workflow foi utilizado como ponto de entrada para os testes e para a publicação das solicitações no Pub/Sub.
 
-Isso permite iniciar o fluxo de forma controlada sem a necessidade de criar uma API HTTP adicional.
-
 ```text
 Workflows
     ↓
@@ -745,7 +743,7 @@ Essa abordagem evita que falhas temporárias sejam tratadas como erros permanent
 
 # Conclusão
 
-O projeto consolida os principais conceitos trabalhados durante os checkpoints:
+O projeto consolida os principais conceitos trabalhados durante a diciplina:
 
 * Arquitetura serverless.
 * Processamento orientado a eventos.
