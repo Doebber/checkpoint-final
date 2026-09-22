@@ -6,7 +6,7 @@ main:
         try:
           call: googleapis.pubsub.v1.projects.topics.publish
           args:
-            topic: projects/project-ab4fa986-e441-43f4-9fe/topics/orders
+            topic: projects/SEU_PROJETO_ID/topics/orders
             body:
               messages:
                 - data: ${base64.encode(text.encode(json.encode_to_string(input)))}
