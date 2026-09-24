@@ -15,8 +15,8 @@ jobs:
 
     env:
       PROJECT_ID: project-ab4fa986-e441-43f4-9fe
-      SERVICE_ACCOUNT_DO_CI_CD: projects/1036053475221/locations/global/workloadIdentityPools/github/providers/github
-      PROVIDER_DO_WORKLOAD_IDENTITY: github-actions-deploy@project-ab4fa986-e441-43f4-9fe.iam.gserviceaccount.com
+      SERVICE_ACCOUNT_DO_CI_CD: github-actions-deploy@project-ab4fa986-e441-43f4-9fe.iam.gserviceaccount.com
+      PROVIDER_DO_WORKLOAD_IDENTITY: projects/1036053475221/locations/global/workloadIdentityPools/github/providers/github
 
     steps:
 
