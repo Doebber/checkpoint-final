@@ -40,7 +40,7 @@
       "emprestimos_ativos": 3,
       "saldo_devedor": 15000,
       "parcelas_totais": 36,
-      "parcelas_pagas": 34,
+      "parcelas_pagas": 20,
       "parcelas_em_atraso": 2,
       "maior_atraso_dias": 7
     },

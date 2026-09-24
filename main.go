@@ -189,19 +189,24 @@ func LoanHandler(
 	// 6. Análise utilizando Vertex AI
 	// ---------------------------------------------------------
 
+	vertexStartTime := time.Now()
+
 	analysisResult, err := AnalyzeCreditWithVertexAI(
 		ctx,
 		analysisInput,
 	)
+
+	vertexDuration := time.Since(vertexStartTime).Milliseconds()
 
 	if err != nil {
 
 		structuredLog(
 			"loan_request_error",
 			map[string]interface{}{
-				"stage":       "vertex_ai",
-				"error":       err.Error(),
-				"duration_ms": time.Since(startTime).Milliseconds(),
+				"stage":                  "vertex_ai",
+				"error":                  err.Error(),
+				"vertex_ai_duration_ms": vertexDuration,
+				"duration_ms":            time.Since(startTime).Milliseconds(),
 			},
 		)
 
@@ -224,7 +229,7 @@ func LoanHandler(
 			"term":     req.Term,
 
 			"analysis": analysisResult,
-
+			"vertex_ai_duration_ms": time.Since(vertexStartTime).Milliseconds(),
 			"duration_ms": time.Since(startTime).Milliseconds(),
 		},
 	)
@@ -241,6 +246,7 @@ func LoanHandler(
 			"name":        customer.Nome,
 			"amount":      req.Amount,
 			"term":        req.Term,
+			"vertex_ai_duration_ms": vertexDuration,
 			"duration_ms": time.Since(startTime).Milliseconds(),
 		},
 	)
