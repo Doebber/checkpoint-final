@@ -1,6 +1,7 @@
 {
   "clientes": [
     {
+      "cliente_id": "C001",
       "cpf": "11111111111",
       "nome": "Joao",
       "emprestimos_ativos": 1,
@@ -11,6 +12,7 @@
       "maior_atraso_dias": 0
     },
     {
+      "cliente_id": "C002",
       "cpf": "22222222222",
       "nome": "Maria",
       "emprestimos_ativos": 2,
@@ -21,6 +23,7 @@
       "maior_atraso_dias": 7
     },
     {
+      "cliente_id": "C003",
       "cpf": "33333333333",
       "nome": "Pedro",
       "emprestimos_ativos": 1,
@@ -31,6 +34,7 @@
       "maior_atraso_dias": 7
     },
     {
+      "cliente_id": "C004",
       "cpf": "44444444444",
       "nome": "Marcia",
       "emprestimos_ativos": 3,
@@ -41,6 +45,7 @@
       "maior_atraso_dias": 7
     },
     {
+      "cliente_id": "C005",
       "cpf": "55555555555",
       "nome": "Claudio",
       "emprestimos_ativos": 1,
@@ -51,6 +56,7 @@
       "maior_atraso_dias": 7
     },
     {
+      "cliente_id": "C006",
       "cpf": "66666666666",
       "nome": "Cleiton",
       "emprestimos_ativos": 1,

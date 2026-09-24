@@ -218,6 +218,7 @@ func LoanHandler(
 		"loan_credit_analysis_completed",
 		map[string]interface{}{
 			"event_id": event.ID(),
+			"customer_id":     customer.ClienteID,
 			"name":     customer.Nome,
 			"amount":   req.Amount,
 			"term":     req.Term,
@@ -236,6 +237,7 @@ func LoanHandler(
 		"loan_request_processed",
 		map[string]interface{}{
 			"event_id":    event.ID(),
+			"customer_id":     customer.ClienteID,
 			"name":        customer.Nome,
 			"amount":      req.Amount,
 			"term":        req.Term,

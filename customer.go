@@ -11,6 +11,7 @@ import (
 var customersData []byte
 
 type Cliente struct {
+	ClienteID		 string `json:"cliente_id"`
 	CPF              string  `json:"cpf"`
 	Nome             string  `json:"nome"`
 	EmprestimosAtivos int     `json:"emprestimos_ativos"`
