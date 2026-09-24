@@ -246,7 +246,7 @@ func LoanHandler(
 			"name":        customer.Nome,
 			"amount":      req.Amount,
 			"term":        req.Term,
-			"vertex_ai_duration_ms": vertexDuration,
+			"vertex_ai_duration_ms": time.Since(vertexStartTime).Milliseconds(),
 			"duration_ms": time.Since(startTime).Milliseconds(),
 		},
 	)
