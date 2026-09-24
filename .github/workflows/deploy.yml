@@ -13,6 +13,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      PROJECT_ID: PROJECT_ID_HERE
+      SERVICE_ACCOUNT_DO_CI_CD: SERVICE_ACCOUNT_DO_CI_CD_HERE
+      PROVIDER_DO_WORKLOAD_IDENTITY: PROVIDER_DO_WORKLOAD_IDENTITY_HERE
+
     steps:
 
       - name: Checkout
@@ -21,9 +26,9 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          project_id: ID_DO_SEU_PROJETO
-          workload_identity_provider: PROVIDER_DO_WORKLOAD_IDENTITY
-          service_account: SERVICE_ACCOUNT_DO_CI_CD
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ env. PROVIDER_DO_WORKLOAD_IDENTITY }}
+          service_account: ${{ env. SERVICE_ACCOUNT_DO_CI_CD }}
 
       - name: Setup Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v3
@@ -34,7 +39,7 @@ jobs:
             --gen2 \
             --runtime=go124 \
             --region=us-central1 \
-            --project=project-ab4fa986-e441-43f4-9fe \
+            --project="$PROJECT_ID" \
             --entry-point=LoanHandler \
             --trigger-topic=orders
 
@@ -42,5 +47,5 @@ jobs:
         run: |
           gcloud workflows deploy loan-workflow \
             --location=us-central1 \
-            --project=project-ab4fa986-e441-43f4-9fe \
+            --project="$PROJECT_ID" \
             --source=workflow.yaml
